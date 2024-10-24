@@ -1,0 +1,90 @@
+workflowExternalId: wf_icapi_data_pipeline
+version: '1'
+workflowDefinition:
+  description: 'A workflow for extractor ~ create oee timeseriese'
+  tasks:
+    - externalId: 'icapi_assets_extractor_task'
+      type: 'function'
+      parameters:
+        function:
+          externalId: 'icapi_assets_extractor'
+          data: {}
+        isAsyncComplete: false
+      name: 'Task Ice Cream API Assets Extractor'
+      description: First task of Ice Cream API Assets Extractor
+      retries: 3
+      timeout: 3600
+      onFailure: 'abortWorkflow'
+
+    - externalId: 'create_assets_hierarchy_task'
+      type: 'transformation'
+      parameters:
+        transformation:
+          externalId: 'create_asset_hierarchy'
+          concurrencyPolicy: fail
+      name: 'Task create_asset_hierarchy'
+      description: Second task of create asset hierarchy
+      retries: 3
+      timeout: 3600
+      onFailure: 'skipTask'
+      dependsOn:
+        - externalId: 'icapi_assets_extractor_task'
+
+    - externalId: 'icapi_timeseries_extractor'
+      type: 'function'
+      parameters:
+        function:
+          externalId: 'icapi_timeseries_extractor'
+          concurrencyPolicy: fail
+      name: 'Task Ice Cream API TimeSeries Extractor'
+      description: Third task of timseseriese's metadata
+      retries: 3
+      timeout: 3600
+      onFailure: 'skipTask'
+      dependsOn:
+        - externalId: 'icapi_assets_extractor_task'
+    
+    - externalId: 'icapi_datapoints_extractor'
+      type: 'function'
+      parameters:
+        function:
+          externalId: 'icapi_datapoints_extractor'
+          concurrencyPolicy: fail
+      name: 'Task Ice Cream API DataPoints Extractor'
+      description: Fourth task of timseseriese's datapoints
+      retries: 3
+      timeout: 3600
+      onFailure: 'skipTask'
+      dependsOn:
+        - externalId: 'icapi_timeseries_extractor'
+
+    - externalId: 'icapi_ts_assets_contextualization'
+      type: 'transformation'
+      parameters:
+        transformation:
+          externalId: 'icapi_ts_assets_contextualization'
+          concurrencyPolicy: fail
+      name: 'Task icapi_ts_assets_contextualization'
+      description: Fifth task of asset and timeseriese context
+      retries: 3
+      timeout: 3600
+      onFailure: 'skipTask'
+      dependsOn:
+        - externalId: 'create_assets_hierarchy_task'
+        - externalId: 'icapi_timeseries_extractor'
+
+    - externalId: 'oee_timeseries'
+      type: 'function'
+      parameters:
+        function:
+          externalId: 'oee_timeseries'
+          concurrencyPolicy: fail
+      name: 'Task OEE TimeSeries'
+      description: Sixth task of asset and timeseriese context
+      retries: 3
+      timeout: 3600
+      onFailure: 'skipTask'
+      dependsOn:
+        - externalId: 'icapi_datapoints_extractor'
+        - externalId: 'icapi_ts_assets_contextualization'
+
